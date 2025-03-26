@@ -5,5 +5,5 @@ ThisBuild / scalaVersion := "3.3.5"
 libraryDependencies += "org.scalatest" %% "scalatest" % "3.2.19" % "test"
 lazy val root = (project in file("."))
   .settings(
-    name := "untitled"
+    name := "tema-1-PP"
   )
