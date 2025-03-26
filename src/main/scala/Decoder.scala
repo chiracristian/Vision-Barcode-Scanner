@@ -3,18 +3,36 @@ import scala.collection.immutable
 
 object Decoder {
   // TODO 1.1
-  def toBit(s: Char): Bit = ???
-  def toBit(s: Int): Bit = ???
+  def toBit(s: Char): Bit = {
+    s match {
+      case '0' => Zero
+      case '1' => One
+    }
+  }
+  def toBit(s: Int): Bit = {
+    s match {
+      case 0 => Zero
+      case 1 => One
+    }
+  }
 
   // TODO 1.2
-  def complement(c: Bit): Bit = ???
+  def complement(c: Bit): Bit = {
+    c match {
+      case Zero => One
+      case One => Zero
+    }
+  }
 
   // TODO 1.3
   val LStrings: List[String] = List("0001101", "0011001", "0010011", "0111101", "0100011",
     "0110001", "0101111", "0111011", "0110111", "0001011")
-  val leftOddList: List[List[Bit]] = Nil // codificări L
-  val rightList: List[List[Bit]] = Nil // codificări R
-  val leftEvenList: List[List[Bit]] = Nil// codificări  G
+
+  val leftOddList: List[List[Bit]] = LStrings.map(str => str.map(toBit).toList) // codificări L
+
+  val rightList: List[List[Bit]] = leftOddList.map(bits => bits.map(complement)) // codificări R
+
+  val leftEvenList: List[List[Bit]] = rightList.map(bits => bits.reverse) // codificări G
   
   // TODO 1.4
   def group[A](l: List[A]): List[List[A]] = ???
