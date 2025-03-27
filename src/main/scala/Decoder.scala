@@ -1,5 +1,6 @@
 import Types.{Bit, Digit, Even, NoParity, Odd, One, Parity, Pixel, Str, Zero}
 
+import java.util.Collections.swap
 import scala.collection.immutable
 
 object Decoder {
@@ -48,7 +49,7 @@ object Decoder {
   
   // TODO 1.5
   def runLength[A](l: List[A]): List[(Int, A)] = {
-    group(l).map(a_group => (a_group.length, a_group.head))
+    group(l).map(elem => (elem.length, elem.head))
   }
   
   case class RatioInt(n: Int, d: Int) extends Ordered[RatioInt] {
@@ -102,24 +103,42 @@ object Decoder {
   }
   
   // TODO 3.1
-  def scaleToOne[A](l: List[(Int, A)]): List[(RatioInt, A)] = ???
+  def scaleToOne[A](l: List[(Int, A)]): List[(RatioInt, A)] = {
+    val totalElements = l.foldLeft(0)((acc, currentPair) => acc + currentPair._1)
+    l.map(currentPair => (RatioInt(currentPair._1, totalElements), currentPair._2))
+  }
 
   // TODO 3.2
-  def scaledRunLength(l: List[(Int, Bit)]): (Bit, List[RatioInt]) = ???
+  def scaledRunLength(l: List[(Int, Bit)]): (Bit, List[RatioInt]) = {
+    (l.head._2, scaleToOne(l).map(currentPair => currentPair._1))
+  }
   
   // TODO 3.3
-  def toParities(s: Str): List[Parity] = ???
+  def toParities(s: Str): List[Parity] = {
+    def toParity(c: Char): Parity = {
+      c match {
+        case 'G' => Even
+        case 'L' => Odd
+      }
+    }
+    s.map(toParity)
+  }
   
   // TODO 3.4
   val PStrings: List[String] = List("LLLLLL", "LLGLGG", "LLGGLG", "LLGGGL", "LGLLGG",
     "LGGLLG", "LGGGLL", "LGLGLG", "LGLGGL", "LGGLGL")
-  val leftParityList: List[List[Parity]] = Nil
+  val leftParityList: List[List[Parity]] = PStrings.map(str => toParities(str.toList))
 
   // TODO 3.5
   type SRL = (Bit, List[RatioInt])
-  val leftOddSRL:  List[SRL] = Nil
-  val leftEvenSRL:  List[SRL] = Nil
-  val rightSRL:  List[SRL] = Nil
+
+  def toSRL(l: List[List[Bit]]): List[SRL] = {
+    l.map(listOfBits => scaledRunLength(runLength(listOfBits)))
+  }
+
+  val leftOddSRL:  List[SRL] = toSRL(leftOddList)
+  val leftEvenSRL:  List[SRL] = toSRL(leftEvenList)
+  val rightSRL:  List[SRL] = toSRL(rightList)
 
   // TODO 4.1
   def distance(l1: SRL, l2: SRL): RatioInt = ???
