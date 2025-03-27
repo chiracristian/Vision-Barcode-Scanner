@@ -1,4 +1,5 @@
-import Types.{Bit, Digit, Even, Odd, NoParity, One, Parity, Pixel, Str, Zero}
+import Types.{Bit, Digit, Even, NoParity, Odd, One, Parity, Pixel, Str, Zero}
+
 import scala.collection.immutable
 
 object Decoder {
@@ -35,10 +36,20 @@ object Decoder {
   val leftEvenList: List[List[Bit]] = rightList.map(bits => bits.reverse) // codificări G
   
   // TODO 1.4
-  def group[A](l: List[A]): List[List[A]] = ???
+  def group[A](l: List[A]): List[List[A]] = {
+    l.foldRight(List[List[A]]()) { (currentElem, acc) =>
+      acc match {
+        case (currentGroup :: restOfGroups) if (currentGroup.head == currentElem) =>
+          (currentElem :: currentGroup) :: restOfGroups
+        case _ => List(currentElem) :: acc
+      }
+    }
+  }
   
   // TODO 1.5
-  def runLength[A](l: List[A]): List[(Int, A)] = ???
+  def runLength[A](l: List[A]): List[(Int, A)] = {
+    group(l).map(a_group => (a_group.length, a_group.head))
+  }
   
   case class RatioInt(n: Int, d: Int) extends Ordered[RatioInt] {
     require(d != 0, "Denominator cannot be zero")
@@ -56,13 +67,38 @@ object Decoder {
     }
 
     // TODO 2.1
-    def -(other: RatioInt): RatioInt = ???
-    def +(other: RatioInt): RatioInt = ???
-    def *(other: RatioInt): RatioInt = ???
-    def /(other: RatioInt): RatioInt = ???
+    def -(other: RatioInt): RatioInt = {
+      val leftNumerator = n * other.d
+      val rightNumerator = other.n * d
+      val commonDenominator = d * other.d
+
+      RatioInt(leftNumerator - rightNumerator, commonDenominator)
+    }
+    def +(other: RatioInt): RatioInt = {
+      val leftNumerator = n * other.d
+      val rightNumerator = other.n * d
+      val commonDenominator = d * other.d
+
+      RatioInt(leftNumerator + rightNumerator, commonDenominator)
+    }
+    def *(other: RatioInt): RatioInt = {
+      RatioInt(n * other.n, d * other.d)
+    }
+    def /(other: RatioInt): RatioInt = {
+      RatioInt(n * other.d, d * other.n)
+    }
 
     // TODO 2.2
-    def compare(other: RatioInt): Int = ???
+    def compare(other: RatioInt): Int = {
+      val difference = (this - other).n
+      if (difference < 0) {
+        -1
+      } else if (difference > 0) {
+        1
+      } else {
+        0
+      }
+    }
   }
   
   // TODO 3.1
