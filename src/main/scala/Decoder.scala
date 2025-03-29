@@ -1,6 +1,5 @@
 import Types.{Bit, Digit, Even, NoParity, Odd, One, Parity, Pixel, Str, Zero}
 
-import java.util.Collections.swap
 import scala.collection.immutable
 
 object Decoder {
@@ -55,46 +54,56 @@ object Decoder {
   case class RatioInt(n: Int, d: Int) extends Ordered[RatioInt] {
     require(d != 0, "Denominator cannot be zero")
     private val gcd = BigInt(n).gcd(BigInt(d)).toInt
-    val a = n / gcd // numărător
-    val b = d / gcd // numitor
+    val numerator: Int = n / gcd // numărător
+    val denominator: Int = d / gcd // numitor
 
-    override def toString: String = s"$a/$b"
+    override def toString: String = s"$numerator/$denominator"
 
     override def equals(obj: Any): Boolean = obj match {
-      case that: RatioInt => this.a.abs == that.a.abs &&
-        this.b.abs == that.b.abs &&
-        this.a.sign * this.b.sign == that.a.sign * that.b.sign
+      case that: RatioInt => this.numerator.abs == that.numerator.abs &&
+        this.denominator.abs == that.denominator.abs &&
+        this.numerator.sign * this.denominator.sign == that.numerator.sign * that.denominator.sign
       case _ => false
     }
 
+    def gcm(a: Int, b: Int): Int = {
+      (a * b) / BigInt(a).gcd(BigInt(b)).toInt
+    }
     // TODO 2.1
     def -(other: RatioInt): RatioInt = {
-      val leftNumerator = n * other.d
-      val rightNumerator = other.n * d
-      val commonDenominator = d * other.d
+      val leftNumerator = numerator * other.denominator
+      val rightNumerator = other.numerator * denominator
+      val commonDenominator = denominator * other.denominator
 
       RatioInt(leftNumerator - rightNumerator, commonDenominator)
     }
     def +(other: RatioInt): RatioInt = {
-      val leftNumerator = n * other.d
-      val rightNumerator = other.n * d
-      val commonDenominator = d * other.d
+      val leftNumerator = numerator * other.denominator
+      val rightNumerator = other.numerator * denominator
+      val commonDenominator = denominator * other.denominator
 
       RatioInt(leftNumerator + rightNumerator, commonDenominator)
     }
     def *(other: RatioInt): RatioInt = {
-      RatioInt(n * other.n, d * other.d)
+      RatioInt(numerator * other.numerator, denominator * other.denominator)
     }
     def /(other: RatioInt): RatioInt = {
-      RatioInt(n * other.d, d * other.n)
+      RatioInt(numerator * other.denominator, denominator * other.numerator)
+    }
+
+    def abs: RatioInt = {
+      if (numerator >= 0)
+        this
+      else RatioInt(-numerator, denominator)
     }
 
     // TODO 2.2
     def compare(other: RatioInt): Int = {
-      val difference = (this - other).n
-      if (difference < 0) {
+      val difference: RatioInt = this - other
+      println(f"$this - $other = $difference")
+      if (difference.numerator < 0) {
         -1
-      } else if (difference > 0) {
+      } else if (difference.numerator > 0) {
         1
       } else {
         0
@@ -140,11 +149,35 @@ object Decoder {
   val leftEvenSRL:  List[SRL] = toSRL(leftEvenList)
   val rightSRL:  List[SRL] = toSRL(rightList)
 
+  val veryLargeDistance: RatioInt = RatioInt(100, 1)
+
   // TODO 4.1
-  def distance(l1: SRL, l2: SRL): RatioInt = ???
+  def distance(l1: SRL, l2: SRL): RatioInt = {
+    val segmentPairs = l1._2.zip(l2._2)
+    val difference = segmentPairs.foldLeft(RatioInt(0, 1))((acc, frac) => acc + (frac._1 - frac._2).abs)
+    if (difference.equals(RatioInt(0,1)) && l1._1 != l2._1)
+      return veryLargeDistance
+    difference
+  }
   
   // TODO 4.2
-  def bestMatch(SRL_Codes: List[SRL], digitCode: SRL): (RatioInt, Digit) = ???
+  def bestMatch(SRL_Codes: List[SRL], digitCode: SRL): (RatioInt, Digit) = {
+    println(f"Target digit code: $digitCode")
+    SRL_Codes.zipWithIndex.foldLeft((veryLargeDistance, -1)) {
+      case ((minRatio, minIndex), (currentSRL, currentIndex)) => {
+        val currentDistance = distance(currentSRL, digitCode)
+        println(f"Current distance: $currentDistance, Current SRL: $currentSRL, Current Index: $currentIndex")
+        val comparis = currentDistance.compare(minRatio)
+        println(f"Min ratio: $minRatio, Min index: $minIndex, Comparison: $comparis")
+        println("----------------------------------------------")
+        if (currentDistance.compare(minRatio) < 0) {
+          (currentDistance, currentIndex)
+        } else {
+          (minRatio, minIndex)
+        }
+      }
+    }
+  }
   
   // TODO 4.3
   def bestLeft(digitCode: SRL): (Parity, Digit) = ???

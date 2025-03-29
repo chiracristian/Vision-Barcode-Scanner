@@ -193,12 +193,15 @@ class Test extends AnyFunSuite with BeforeAndAfterAll {
     assert(bestMatch(leftEvenSRL, leftEvenSRL(3)) == (RatioInt(0, 1), 3))
     assert(bestMatch(rightSRL, rightSRL(7)) == (RatioInt(0, 1), 7))
 
+    print("BEFORE FAILING TEST\n\n")
     assert(bestMatch(rightSRL, leftOddSRL(5))._1 > RatioInt(1, 1))
+    print("AFTER_FAILING_TEST\n\n")
 
     assert(bestMatch(leftOddSRL, fiveLeftOdd) == (RatioInt(140, 3675), 5))
     assert(bestMatch(rightSRL, oneRight) == (RatioInt(12852, 127449), 1))
     assert(bestMatch(leftEvenSRL, eightLeftEven) == (RatioInt(4480, 98000), 8))
 
+    print("All best match passed")
     //    Best Left
     assert(bestLeft(leftOddSRL(2)) == (Odd, 2))
     assert(bestLeft(leftEvenSRL.head) == (Even, 0))
