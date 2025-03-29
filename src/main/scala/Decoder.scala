@@ -211,7 +211,23 @@ object Decoder {
     chunkWith((l: List[A]) => l.splitAt(n))(l)
 
   // TODO 4.5
-  def findLast12Digits(rle:  List[(Int, Bit)]): List[(Parity, Digit)] = ???
+
+  def findLast12Digits(rle:  List[(Int, Bit)]): List[(Parity, Digit)] = {
+    require(rle.length == 59, "The length must be 59")
+    
+    def getDigitsFromGroup(l: List[(Int, Bit)],
+                           digitFromSRL: (SRL) => (Parity, Digit)): List[(Parity, Digit)] = {
+      val chunks = chunksOf(4)(l)
+      val scaled = chunks.map(scaledRunLength)
+      scaled.map(digitFromSRL)
+    }
+
+    val rleWithoutFirstAndLast = rle.drop(3).dropRight(3)
+    val leftGroup = rleWithoutFirstAndLast.take(24)
+    val rightGroup = rleWithoutFirstAndLast.takeRight(24)
+
+    getDigitsFromGroup(leftGroup, bestLeft) ::: getDigitsFromGroup(rightGroup, bestRight)
+  }
 
   // TODO 4.6
   def firstDigit(l: List[(Parity, Digit)]): Option[Digit] = ???
