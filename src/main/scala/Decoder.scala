@@ -54,15 +54,15 @@ object Decoder {
   case class RatioInt(n: Int, d: Int) extends Ordered[RatioInt] {
     require(d != 0, "Denominator cannot be zero")
     private val gcd = BigInt(n).gcd(BigInt(d)).toInt
-    val numerator: Int = n / gcd // numărător
-    val denominator: Int = d / gcd // numitor
+    val num: Int = n / gcd // numărător
+    val den: Int = d / gcd // numitor
 
-    override def toString: String = s"$numerator/$denominator"
+    override def toString: String = s"$num/$den"
 
     override def equals(obj: Any): Boolean = obj match {
-      case that: RatioInt => this.numerator.abs == that.numerator.abs &&
-        this.denominator.abs == that.denominator.abs &&
-        this.numerator.sign * this.denominator.sign == that.numerator.sign * that.denominator.sign
+      case that: RatioInt => this.num.abs == that.num.abs &&
+        this.den.abs == that.den.abs &&
+        this.num.sign * this.den.sign == that.num.sign * that.den.sign
       case _ => false
     }
 
@@ -71,39 +71,39 @@ object Decoder {
     }
     // TODO 2.1
     def -(other: RatioInt): RatioInt = {
-      val leftNumerator = numerator * other.denominator
-      val rightNumerator = other.numerator * denominator
-      val commonDenominator = denominator * other.denominator
+      val leftNumerator = num * other.den
+      val rightNumerator = other.num * den
+      val commonDenominator = den * other.den
 
       RatioInt(leftNumerator - rightNumerator, commonDenominator)
     }
     def +(other: RatioInt): RatioInt = {
-      val leftNumerator = numerator * other.denominator
-      val rightNumerator = other.numerator * denominator
-      val commonDenominator = denominator * other.denominator
+      val leftNumerator = num * other.den
+      val rightNumerator = other.num * den
+      val commonDenominator = den * other.den
 
       RatioInt(leftNumerator + rightNumerator, commonDenominator)
     }
     def *(other: RatioInt): RatioInt = {
-      RatioInt(numerator * other.numerator, denominator * other.denominator)
+      RatioInt(num * other.num, den * other.den)
     }
     def /(other: RatioInt): RatioInt = {
-      RatioInt(numerator * other.denominator, denominator * other.numerator)
+      RatioInt(num * other.den, den * other.num)
     }
 
     def abs: RatioInt = {
-      if (numerator >= 0)
+      if (num >= 0)
         this
-      else RatioInt(-numerator, denominator)
+      else RatioInt(-num, den)
     }
 
     // TODO 2.2
     def compare(other: RatioInt): Int = {
       val difference: RatioInt = this - other
-      println(f"$this - $other = $difference")
-      if (difference.numerator < 0) {
+//      println(f"$this - $other = $difference")
+      if (difference.num < 0) {
         -1
-      } else if (difference.numerator > 0) {
+      } else if (difference.num > 0) {
         1
       } else {
         0
@@ -149,41 +149,54 @@ object Decoder {
   val leftEvenSRL:  List[SRL] = toSRL(leftEvenList)
   val rightSRL:  List[SRL] = toSRL(rightList)
 
-  val veryLargeDistance: RatioInt = RatioInt(100, 1)
+  val infiniteDistance: RatioInt = RatioInt(100, 1)
+  val almostInfiniteDistance: RatioInt = RatioInt(99, 1)
 
   // TODO 4.1
   def distance(l1: SRL, l2: SRL): RatioInt = {
     val segmentPairs = l1._2.zip(l2._2)
     val difference = segmentPairs.foldLeft(RatioInt(0, 1))((acc, frac) => acc + (frac._1 - frac._2).abs)
     if (difference.equals(RatioInt(0,1)) && l1._1 != l2._1)
-      return veryLargeDistance
+      return infiniteDistance
     difference
   }
   
   // TODO 4.2
   def bestMatch(SRL_Codes: List[SRL], digitCode: SRL): (RatioInt, Digit) = {
-    println(f"Target digit code: $digitCode")
-    SRL_Codes.zipWithIndex.foldLeft((veryLargeDistance, -1)) {
-      case ((minRatio, minIndex), (currentSRL, currentIndex)) => {
+    SRL_Codes.zipWithIndex.foldLeft((almostInfiniteDistance, -1)) {
+      case ((minDistance, minIndex), (currentSRL, currentIndex)) => {
         val currentDistance = distance(currentSRL, digitCode)
-        println(f"Current distance: $currentDistance, Current SRL: $currentSRL, Current Index: $currentIndex")
-        val comparis = currentDistance.compare(minRatio)
-        println(f"Min ratio: $minRatio, Min index: $minIndex, Comparison: $comparis")
-        println("----------------------------------------------")
-        if (currentDistance.compare(minRatio) < 0) {
+        // Cazul in care se dau bare complementare, se returneaza acestea
+        if (minDistance == infiniteDistance) {
+          (minDistance, minIndex)
+        } else if (currentDistance == infiniteDistance) {
+          (infiniteDistance, currentIndex)
+        }
+        // In restul cazurilor luam distanta cea mai mica
+        else if (currentDistance.compare(minDistance) < 0) {
           (currentDistance, currentIndex)
         } else {
-          (minRatio, minIndex)
+          (minDistance, minIndex)
         }
       }
     }
   }
   
   // TODO 4.3
-  def bestLeft(digitCode: SRL): (Parity, Digit) = ???
+  def bestLeft(digitCode: SRL): (Parity, Digit) = {
+    val matchOdd = bestMatch(leftOddSRL, digitCode)
+    val matchEven = bestMatch(leftEvenSRL, digitCode)
+    if (matchOdd._1 < matchEven._1) {
+      (Odd, matchOdd._2)
+    } else {
+      (Even, matchEven._2)
+    }
+  }
   
   // TODO 4.4
-  def bestRight(digitCode: SRL): (Parity, Digit) = ???
+  def bestRight(digitCode: SRL): (Parity, Digit) = {
+    (NoParity, bestMatch(rightSRL, digitCode)._2)
+  }
 
   def chunkWith[A](f: List[A] => (List[A], List[A]))(l: List[A]): List[List[A]] = {
     l match {
