@@ -180,7 +180,7 @@ object Decoder {
         } else if (currentDistance == infiniteDistance) {
           (infiniteDistance, currentIndex)
         }
-        // In restul cazurilor luam distanta cea mai mică
+        // In restul cazurilor luam distanța cea mai mică
         else if (currentDistance.compare(minDistance) < 0) {
           (currentDistance, currentIndex)
         } else {
