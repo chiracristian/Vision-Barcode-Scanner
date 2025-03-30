@@ -1,5 +1,6 @@
 import Types.{Bit, Digit, Even, NoParity, Odd, One, Parity, Pixel, Str, Zero}
 
+import scala.annotation.targetName
 import scala.collection.immutable
 
 object Decoder {
@@ -26,7 +27,7 @@ object Decoder {
   }
 
   // TODO 1.3
-  val LStrings: List[String] = List("0001101", "0011001", "0010011", "0111101", "0100011",
+  private val LStrings: List[String] = List("0001101", "0011001", "0010011", "0111101", "0100011",
     "0110001", "0101111", "0111011", "0110111", "0001011")
 
   val leftOddList: List[List[Bit]] = LStrings.map(str => str.map(toBit).toList) // codificări L
@@ -39,7 +40,7 @@ object Decoder {
   def group[A](l: List[A]): List[List[A]] = {
     l.foldRight(List[List[A]]()) { (currentElem, acc) =>
       acc match {
-        case (currentGroup :: restOfGroups) if (currentGroup.head == currentElem) =>
+        case currentGroup :: restOfGroups if currentGroup.head == currentElem =>
           (currentElem :: currentGroup) :: restOfGroups
         case _ => List(currentElem) :: acc
       }
@@ -54,55 +55,60 @@ object Decoder {
   case class RatioInt(n: Int, d: Int) extends Ordered[RatioInt] {
     require(d != 0, "Denominator cannot be zero")
     private val gcd = BigInt(n).gcd(BigInt(d)).toInt
-    val num: Int = n / gcd // numărător
-    val den: Int = d / gcd // numitor
 
-    override def toString: String = s"$num/$den"
+    private val a: Int = n / gcd // numărător
+    private val b: Int = d / gcd // numitor
+
+    override def toString: String = s"$a/$b"
 
     override def equals(obj: Any): Boolean = obj match {
-      case that: RatioInt => this.num.abs == that.num.abs &&
-        this.den.abs == that.den.abs &&
-        this.num.sign * this.den.sign == that.num.sign * that.den.sign
+      case that: RatioInt => this.a.abs == that.a.abs &&
+        this.b.abs == that.b.abs &&
+        this.a.sign * this.b.sign == that.a.sign * that.b.sign
       case _ => false
     }
 
-    def gcm(a: Int, b: Int): Int = {
-      (a * b) / BigInt(a).gcd(BigInt(b)).toInt
-    }
     // TODO 2.1
+    @targetName("subtractRatios")
     def -(other: RatioInt): RatioInt = {
-      val leftNumerator = num * other.den
-      val rightNumerator = other.num * den
-      val commonDenominator = den * other.den
+      val leftNumerator = a * other.b
+      val rightNumerator = other.a * b
+      val commonDenominator = b * other.b
 
       RatioInt(leftNumerator - rightNumerator, commonDenominator)
     }
+
+    @targetName("addRatios")
     def +(other: RatioInt): RatioInt = {
-      val leftNumerator = num * other.den
-      val rightNumerator = other.num * den
-      val commonDenominator = den * other.den
+      val leftNumerator = a * other.b
+      val rightNumerator = other.a * b
+      val commonDenominator = b * other.b
 
       RatioInt(leftNumerator + rightNumerator, commonDenominator)
     }
+
+    @targetName("multiplyRatios")
     def *(other: RatioInt): RatioInt = {
-      RatioInt(num * other.num, den * other.den)
+      RatioInt(a * other.a, b * other.b)
     }
+
+    @targetName("divideRatios")
     def /(other: RatioInt): RatioInt = {
-      RatioInt(num * other.den, den * other.num)
+      RatioInt(a * other.b, b * other.a)
     }
 
     def abs: RatioInt = {
-      if (num >= 0)
+      if (a >= 0)
         this
-      else RatioInt(-num, den)
+      else RatioInt(-a, b)
     }
 
     // TODO 2.2
     def compare(other: RatioInt): Int = {
       val difference: RatioInt = this - other
-      if (difference.num < 0) {
+      if (difference.a < 0) {
         -1
-      } else if (difference.num > 0) {
+      } else if (difference.a > 0) {
         1
       } else {
         0
@@ -112,8 +118,8 @@ object Decoder {
   
   // TODO 3.1
   def scaleToOne[A](l: List[(Int, A)]): List[(RatioInt, A)] = {
-    val totalElements = l.foldLeft(0)((acc, currentPair) => acc + currentPair._1)
-    l.map(currentPair => (RatioInt(currentPair._1, totalElements), currentPair._2))
+    val numberOfElements = l.foldLeft(0)((acc, currentPair) => acc + currentPair._1)
+    l.map(currentPair => (RatioInt(currentPair._1, numberOfElements), currentPair._2))
   }
 
   // TODO 3.2
@@ -133,14 +139,14 @@ object Decoder {
   }
   
   // TODO 3.4
-  val PStrings: List[String] = List("LLLLLL", "LLGLGG", "LLGGLG", "LLGGGL", "LGLLGG",
+  private val PStrings: List[String] = List("LLLLLL", "LLGLGG", "LLGGLG", "LLGGGL", "LGLLGG",
     "LGGLLG", "LGGGLL", "LGLGLG", "LGLGGL", "LGGLGL")
   val leftParityList: List[List[Parity]] = PStrings.map(str => toParities(str.toList))
 
   // TODO 3.5
-  type SRL = (Bit, List[RatioInt])
+  private type SRL = (Bit, List[RatioInt])
 
-  def toSRL(l: List[List[Bit]]): List[SRL] = {
+  private def toSRL(l: List[List[Bit]]): List[SRL] = {
     l.map(listOfBits => scaledRunLength(runLength(listOfBits)))
   }
 
@@ -148,36 +154,38 @@ object Decoder {
   val leftEvenSRL:  List[SRL] = toSRL(leftEvenList)
   val rightSRL:  List[SRL] = toSRL(rightList)
 
-  val infiniteDistance: RatioInt = RatioInt(100, 1)
-  val almostInfiniteDistance: RatioInt = RatioInt(99, 1)
+  private val infiniteDistance: RatioInt = RatioInt(100, 1)
+  private val almostInfiniteDistance: RatioInt = RatioInt(99, 1)
 
   // TODO 4.1
   def distance(l1: SRL, l2: SRL): RatioInt = {
     val segmentPairs = l1._2.zip(l2._2)
     val difference = segmentPairs.foldLeft(RatioInt(0, 1))((acc, frac) => acc + (frac._1 - frac._2).abs)
+
+    // Considerăm o distanță infinită pentru barele complementare
     if (difference.equals(RatioInt(0,1)) && l1._1 != l2._1)
       return infiniteDistance
+
     difference
   }
   
   // TODO 4.2
   def bestMatch(SRL_Codes: List[SRL], digitCode: SRL): (RatioInt, Digit) = {
     SRL_Codes.zipWithIndex.foldLeft((almostInfiniteDistance, -1)) {
-      case ((minDistance, minIndex), (currentSRL, currentIndex)) => {
+      case ((minDistance, minIndex), (currentSRL, currentIndex)) =>
         val currentDistance = distance(currentSRL, digitCode)
-        // Cazul in care se dau bare complementare, se returneaza acestea
+        // Dacă se găsește o bară complementară, o returnăm pe aceea
         if (minDistance == infiniteDistance) {
           (minDistance, minIndex)
         } else if (currentDistance == infiniteDistance) {
           (infiniteDistance, currentIndex)
         }
-        // In restul cazurilor luam distanta cea mai mica
+        // In restul cazurilor luam distanta cea mai mică
         else if (currentDistance.compare(minDistance) < 0) {
           (currentDistance, currentIndex)
         } else {
           (minDistance, minIndex)
         }
-      }
     }
   }
   
@@ -197,7 +205,7 @@ object Decoder {
     (NoParity, bestMatch(rightSRL, digitCode)._2)
   }
 
-  def chunkWith[A](f: List[A] => (List[A], List[A]))(l: List[A]): List[List[A]] = {
+  private def chunkWith[A](f: List[A] => (List[A], List[A]))(l: List[A]): List[List[A]] = {
     l match {
       case Nil => Nil
       case _ =>
@@ -206,7 +214,7 @@ object Decoder {
     }
   }
   
-  def chunksOf[A](n: Int)(l: List[A]): List[List[A]] =
+  private def chunksOf[A](n: Int)(l: List[A]): List[List[A]] =
     chunkWith((l: List[A]) => l.splitAt(n))(l)
 
   // TODO 4.5
@@ -215,7 +223,7 @@ object Decoder {
     require(rle.length == 59, "The length must be 59")
 
     def getDigitsFromGroup(l: List[(Int, Bit)],
-                           digitFromSRL: (SRL) => (Parity, Digit)): List[(Parity, Digit)] = {
+                           digitFromSRL: SRL => (Parity, Digit)): List[(Parity, Digit)] = {
       val chunks = chunksOf(4)(l)
       val scaled = chunks.map(scaledRunLength)
       scaled.map(digitFromSRL)
@@ -278,7 +286,7 @@ object Decoder {
   }
   
   def checkRow(row: List[Pixel]): List[List[(Int, Bit)]] = {
-    val rle = runLength(row);
+    val rle = runLength(row)
 
     def condition(sl: List[(Int, Pixel)]): Boolean = {
       if (sl.isEmpty) false
