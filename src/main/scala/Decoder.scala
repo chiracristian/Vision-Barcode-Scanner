@@ -100,7 +100,6 @@ object Decoder {
     // TODO 2.2
     def compare(other: RatioInt): Int = {
       val difference: RatioInt = this - other
-//      println(f"$this - $other = $difference")
       if (difference.num < 0) {
         -1
       } else if (difference.num > 0) {
@@ -214,7 +213,7 @@ object Decoder {
 
   def findLast12Digits(rle:  List[(Int, Bit)]): List[(Parity, Digit)] = {
     require(rle.length == 59, "The length must be 59")
-    
+
     def getDigitsFromGroup(l: List[(Int, Bit)],
                            digitFromSRL: (SRL) => (Parity, Digit)): List[(Parity, Digit)] = {
       val chunks = chunksOf(4)(l)
@@ -230,16 +229,53 @@ object Decoder {
   }
 
   // TODO 4.6
-  def firstDigit(l: List[(Parity, Digit)]): Option[Digit] = ???
+  def firstDigit(l: List[(Parity, Digit)]): Option[Digit] = {
+    val parityToFind = l.take(6).map(x => x._1)
+    Some(leftParityList.indexOf(parityToFind))
+  }
 
   // TODO 4.7
-  def checkDigit(l: List[Digit]): Digit = ???
+  def checkDigit(l: List[Digit]): Digit = {
+    val controlWeights = List.tabulate(12)(i => if(i % 2 == 0) 1 else 3)
+    val digitsAndWeights = l.zip(controlWeights)
+    val weightDigitsSum = digitsAndWeights.foldLeft(0)((acc, digitWeight) => acc + digitWeight._1 * digitWeight._2)
+    (10 - weightDigitsSum % 10) % 10
+  }
   
   // TODO 4.8
-  def verifyCode(code: List[(Parity, Digit)]): Option[String] = ???
+  def verifyCode(code: List[(Parity, Digit)]): Option[String] = {
+    def digitToChar(digit: Digit): Char = {
+      digit match {
+        case 0 => '0'
+        case 1 => '1'
+        case 2 => '2'
+        case 3 => '3'
+        case 4 => '4'
+        case 5 => '5'
+        case 6 => '6'
+        case 7 => '7'
+        case 8 => '8'
+        case 9 => '9'
+        case _ => ' '
+      }
+    }
+    if (code.length != 13) {
+      return None
+    }
+    val digits = code.map(x => x._2)
+    if (digits.head != firstDigit(code.drop(1)).get || digits.last != checkDigit(digits)) {
+      return None
+    }
+    val digitCharList = digits.map(x => digitToChar(x))
+    Some(digitCharList.mkString)
+  }
   
   // TODO 4.9
-  def solve(rle:  List[(Int, Bit)]): Option[String] = ???
+  def solve(rle:  List[(Int, Bit)]): Option[String] = {
+    val last12 = findLast12Digits(rle)
+    val first = firstDigit(last12)
+    verifyCode((NoParity, first.get) :: last12)
+  }
   
   def checkRow(row: List[Pixel]): List[List[(Int, Bit)]] = {
     val rle = runLength(row);
