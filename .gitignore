@@ -1,6 +1,7 @@
-# Project exclude paths
 .idea
 /project/target/
 /target/
 /target/scala-3.3.5/classes/
 /target/scala-3.3.5/test-classes/
+ProcessedBarcodes/
+MyBarcodesOutput/
