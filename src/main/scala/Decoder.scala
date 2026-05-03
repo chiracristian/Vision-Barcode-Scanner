@@ -1,10 +1,38 @@
+/*
+ * Copyright (c) 2025, Cristian-Ioan-George Chira
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer.
+ *
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * 3. Neither the name of the copyright holder nor the names of its
+ *    contributors may be used to endorse or promote products derived from
+ *    this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
 import Types.{Bit, Digit, Even, NoParity, Odd, One, Parity, Pixel, Str, Zero}
 
 import scala.annotation.targetName
 import scala.collection.immutable
 
 object Decoder {
-  // TODO 1.1
   def toBit(s: Char): Bit = {
     s match {
       case '0' => Zero
@@ -18,7 +46,6 @@ object Decoder {
     }
   }
 
-  // TODO 1.2
   def complement(c: Bit): Bit = {
     c match {
       case Zero => One
@@ -26,17 +53,15 @@ object Decoder {
     }
   }
 
-  // TODO 1.3
   private val LStrings: List[String] = List("0001101", "0011001", "0010011", "0111101", "0100011",
     "0110001", "0101111", "0111011", "0110111", "0001011")
 
-  val leftOddList: List[List[Bit]] = LStrings.map(str => str.map(toBit).toList) // codificări L
+  val leftOddList: List[List[Bit]] = LStrings.map(str => str.map(toBit).toList)
 
-  val rightList: List[List[Bit]] = leftOddList.map(bits => bits.map(complement)) // codificări R
+  val rightList: List[List[Bit]] = leftOddList.map(bits => bits.map(complement))
 
-  val leftEvenList: List[List[Bit]] = rightList.map(bits => bits.reverse) // codificări G
+  val leftEvenList: List[List[Bit]] = rightList.map(bits => bits.reverse)
   
-  // TODO 1.4
   def group[A](l: List[A]): List[List[A]] = {
     l.foldRight(List[List[A]]()) { (currentElem, acc) =>
       acc match {
@@ -47,7 +72,6 @@ object Decoder {
     }
   }
   
-  // TODO 1.5
   def runLength[A](l: List[A]): List[(Int, A)] = {
     group(l).map(elem => (elem.length, elem.head))
   }
@@ -56,8 +80,8 @@ object Decoder {
     require(d != 0, "Denominator cannot be zero")
     private val gcd = BigInt(n).gcd(BigInt(d)).toInt
 
-    private val a: Int = n / gcd // numărător
-    private val b: Int = d / gcd // numitor
+    private val a: Int = n / gcd // numerator
+    private val b: Int = d / gcd // denominator
 
     override def toString: String = s"$a/$b"
 
@@ -68,7 +92,6 @@ object Decoder {
       case _ => false
     }
 
-    // TODO 2.1
     @targetName("subtractRatios")
     def -(other: RatioInt): RatioInt = {
       val leftNumerator = a * other.b
@@ -103,7 +126,6 @@ object Decoder {
       else RatioInt(-a, b)
     }
 
-    // TODO 2.2
     def compare(other: RatioInt): Int = {
       val difference: RatioInt = this - other
       if (difference.a < 0) {
@@ -116,18 +138,15 @@ object Decoder {
     }
   }
   
-  // TODO 3.1
   def scaleToOne[A](l: List[(Int, A)]): List[(RatioInt, A)] = {
     val numberOfElements = l.foldLeft(0)((acc, currentPair) => acc + currentPair._1)
     l.map(currentPair => (RatioInt(currentPair._1, numberOfElements), currentPair._2))
   }
 
-  // TODO 3.2
   def scaledRunLength(l: List[(Int, Bit)]): (Bit, List[RatioInt]) = {
     (l.head._2, scaleToOne(l).map(currentPair => currentPair._1))
   }
   
-  // TODO 3.3
   def toParities(s: Str): List[Parity] = {
     def toParity(c: Char): Parity = {
       c match {
@@ -138,12 +157,10 @@ object Decoder {
     s.map(toParity)
   }
   
-  // TODO 3.4
   private val PStrings: List[String] = List("LLLLLL", "LLGLGG", "LLGGLG", "LLGGGL", "LGLLGG",
     "LGGLLG", "LGGGLL", "LGLGLG", "LGLGGL", "LGGLGL")
   val leftParityList: List[List[Parity]] = PStrings.map(str => toParities(str.toList))
 
-  // TODO 3.5
   private type SRL = (Bit, List[RatioInt])
 
   private def toSRL(l: List[List[Bit]]): List[SRL] = {
@@ -157,30 +174,28 @@ object Decoder {
   private val infiniteDistance: RatioInt = RatioInt(100, 1)
   private val almostInfiniteDistance: RatioInt = RatioInt(99, 1)
 
-  // TODO 4.1
   def distance(l1: SRL, l2: SRL): RatioInt = {
     val segmentPairs = l1._2.zip(l2._2)
     val difference = segmentPairs.foldLeft(RatioInt(0, 1))((acc, frac) => acc + (frac._1 - frac._2).abs)
 
-    // Considerăm o distanță infinită pentru barele complementare
+    // We consider the distance infinite for complementary bars
     if (difference.equals(RatioInt(0,1)) && l1._1 != l2._1)
       return infiniteDistance
 
     difference
   }
   
-  // TODO 4.2
   def bestMatch(SRL_Codes: List[SRL], digitCode: SRL): (RatioInt, Digit) = {
     SRL_Codes.zipWithIndex.foldLeft((almostInfiniteDistance, -1)) {
       case ((minDistance, minIndex), (currentSRL, currentIndex)) =>
         val currentDistance = distance(currentSRL, digitCode)
-        // Dacă se găsește o bară complementară, o returnăm pe aceea
+        // If a complementary bar is found, we return it
         if (minDistance == infiniteDistance) {
           (minDistance, minIndex)
         } else if (currentDistance == infiniteDistance) {
           (infiniteDistance, currentIndex)
         }
-        // In restul cazurilor luam distanța cea mai mică
+        // Otherwise we take the smallest distance
         else if (currentDistance.compare(minDistance) < 0) {
           (currentDistance, currentIndex)
         } else {
@@ -189,7 +204,6 @@ object Decoder {
     }
   }
   
-  // TODO 4.3
   def bestLeft(digitCode: SRL): (Parity, Digit) = {
     val matchOdd = bestMatch(leftOddSRL, digitCode)
     val matchEven = bestMatch(leftEvenSRL, digitCode)
@@ -200,7 +214,6 @@ object Decoder {
     }
   }
   
-  // TODO 4.4
   def bestRight(digitCode: SRL): (Parity, Digit) = {
     (NoParity, bestMatch(rightSRL, digitCode)._2)
   }
@@ -216,8 +229,6 @@ object Decoder {
   
   private def chunksOf[A](n: Int)(l: List[A]): List[List[A]] =
     chunkWith((l: List[A]) => l.splitAt(n))(l)
-
-  // TODO 4.5
 
   def findLast12Digits(rle:  List[(Int, Bit)]): List[(Parity, Digit)] = {
     require(rle.length == 59, "The length must be 59")
@@ -236,13 +247,11 @@ object Decoder {
     getDigitsFromGroup(leftGroup, bestLeft) ::: getDigitsFromGroup(rightGroup, bestRight)
   }
 
-  // TODO 4.6
   def firstDigit(l: List[(Parity, Digit)]): Option[Digit] = {
     val parityToFind = l.take(6).map(x => x._1)
     Some(leftParityList.indexOf(parityToFind))
   }
 
-  // TODO 4.7
   def checkDigit(l: List[Digit]): Digit = {
     val controlWeights = List.tabulate(12)(i => if(i % 2 == 0) 1 else 3)
     val digitsAndWeights = l.zip(controlWeights)
@@ -250,7 +259,6 @@ object Decoder {
     (10 - weightDigitsSum % 10) % 10
   }
   
-  // TODO 4.8
   def verifyCode(code: List[(Parity, Digit)]): Option[String] = {
     def digitToChar(digit: Digit): Char = {
       digit match {
@@ -278,7 +286,6 @@ object Decoder {
     Some(digitCharList.mkString)
   }
   
-  // TODO 4.9
   def solve(rle:  List[(Int, Bit)]): Option[String] = {
     val last12 = findLast12Digits(rle)
     val first = firstDigit(last12)
